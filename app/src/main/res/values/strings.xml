@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">GoogleMapsGooglePlaces</string>
     <string name="google_maps_API_key" translatable="false">AIzaSyCdqwsWVkuFoCITQHsmXu8dknZQaOxdTM8</string>
+    <string name="enter_address_city_or_zip_code">Enter Address, City or Zip Code</string>
 </resources>

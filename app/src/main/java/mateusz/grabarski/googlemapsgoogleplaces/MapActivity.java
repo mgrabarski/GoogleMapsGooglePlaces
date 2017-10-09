@@ -2,6 +2,8 @@ package mateusz.grabarski.googlemapsgoogleplaces;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -9,6 +11,10 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -20,6 +26,10 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapActivity";
@@ -29,6 +39,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     public static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     public static final float DEFAULT_ZOOM = 15f;
+    public static final int MAX_SEARCH_RESULTS = 3;
+
+    private EditText mSearchText;
 
     private boolean mLocationPermissionsGranted = false;
 
@@ -41,7 +54,51 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
+        mSearchText = findViewById(R.id.input_search);
+
         getLocationPermission();
+    }
+
+    private void init() {
+        Log.d(TAG, "init: initializing");
+
+        mSearchText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+                        actionId == EditorInfo.IME_ACTION_DONE ||
+                        event.getAction() == KeyEvent.ACTION_DOWN ||
+                        event.getAction() == KeyEvent.KEYCODE_ENTER) {
+
+                    // execute our method for searching
+                    geoLocation();
+                }
+
+                return false;
+            }
+        });
+    }
+
+    private void geoLocation() {
+        Log.d(TAG, "geoLocation: geo location");
+
+        String searchString = mSearchText.getText().toString();
+
+        Geocoder geocoder = new Geocoder(this);
+
+        List<Address> addressList = new ArrayList<>();
+
+        try {
+            addressList = geocoder.getFromLocationName(searchString, MAX_SEARCH_RESULTS);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (addressList.size() > 0) {
+            Address address = addressList.get(0);
+
+            Log.d(TAG, "geoLocation: " + address.toString());
+        }
     }
 
     private void initMap() {
@@ -109,7 +166,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             mMap.setMyLocationEnabled(true);
 
             mMap.getUiSettings().setMyLocationButtonEnabled(false);
-            
+
+            init();
         }
     }
 
