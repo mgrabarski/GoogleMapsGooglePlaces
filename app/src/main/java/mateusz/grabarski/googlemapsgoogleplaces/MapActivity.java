@@ -12,8 +12,11 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -23,6 +26,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
@@ -42,6 +46,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public static final int MAX_SEARCH_RESULTS = 3;
 
     private EditText mSearchText;
+    private ImageView myLocationIv;
 
     private boolean mLocationPermissionsGranted = false;
 
@@ -55,6 +60,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_map);
 
         mSearchText = findViewById(R.id.input_search);
+        myLocationIv = findViewById(R.id.ic_gps);
 
         getLocationPermission();
     }
@@ -77,6 +83,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 return false;
             }
         });
+
+        myLocationIv.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClick: move camera to device location");
+                getDeviceCurrentLocation();
+            }
+        });
+
+        hideSoftKeyboard();
     }
 
     private void geoLocation() {
@@ -98,6 +114,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             Address address = addressList.get(0);
 
             Log.d(TAG, "geoLocation: " + address.toString());
+
+            moveCamera(new LatLng(address.getLatitude(), address.getLongitude()),
+                    DEFAULT_ZOOM,
+                    address.getAddressLine(0));
         }
     }
 
@@ -184,7 +204,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             Log.d(TAG, "onComplete: found location!");
                             Location location = (Location) task.getResult();
 
-                            moveCamera(new LatLng(location.getLatitude(), location.getLongitude()), DEFAULT_ZOOM);
+                            moveCamera(new LatLng(location.getLatitude(),
+                                            location.getLongitude()), DEFAULT_ZOOM,
+                                    "My location");
                         } else {
                             Log.d(TAG, "onComplete: current location is null");
                         }
@@ -196,8 +218,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-    private void moveCamera(LatLng latLng, float zoom) {
+    private void moveCamera(LatLng latLng, float zoom, String title) {
         Log.d(TAG, "moveCamera: move camera to lat = " + latLng.latitude + ", long = " + latLng.longitude);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+
+        if (!title.equals("My location")) {
+            MarkerOptions options = new MarkerOptions();
+            options.position(latLng);
+            options.title(title);
+
+            mMap.addMarker(options);
+        }
+
+        hideSoftKeyboard();
+    }
+
+    private void hideSoftKeyboard() {
+        this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 }
