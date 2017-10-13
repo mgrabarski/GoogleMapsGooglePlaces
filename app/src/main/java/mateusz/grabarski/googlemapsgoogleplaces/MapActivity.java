@@ -36,6 +36,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -61,7 +62,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             new LatLng(-40, -168), new LatLng(71, 136));
 
     private AutoCompleteTextView mSearchText;
-    private ImageView myLocationIv;
+    private ImageView myLocationIv, mInfo;
 
     private boolean mLocationPermissionsGranted = false;
 
@@ -69,6 +70,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private PlaceAutocompleteAdapter mPlaceAutocompleteAdapter;
     private GoogleApiClient mGoogleApiClient;
     private PlaceInfo mPlace;
+    private Marker mMarker;
 
     private GoogleMap mMap;
 
@@ -79,6 +81,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         mSearchText = findViewById(R.id.input_search);
         myLocationIv = findViewById(R.id.ic_gps);
+        mInfo = findViewById(R.id.place_info);
 
         getLocationPermission();
     }
@@ -122,6 +125,21 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 Log.d(TAG, "onClick: move camera to device location");
                 getDeviceCurrentLocation();
+            }
+        });
+
+        mInfo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClick: clicked place info");
+
+                try {
+                    if (mMarker.isInfoWindowShown()) mMarker.hideInfoWindow();
+                    else mMarker.showInfoWindow();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -266,6 +284,35 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         hideSoftKeyboard();
     }
 
+    private void moveCamera(LatLng latLng, float zoom, PlaceInfo placeInfo) {
+        Log.d(TAG, "moveCamera: move camera to lat = " + latLng.latitude + ", long = " + latLng.longitude);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+
+        mMap.clear();
+
+        if (placeInfo != null) {
+            try {
+                String snippet = "Address: " + placeInfo.getAddress() + "\n" +
+                        "Phone Number: " + placeInfo.getPhoneNumber() + "\n" +
+                        "Website: " + placeInfo.getWebsiteUri() + "\n" +
+                        "Price Rating: " + placeInfo.getRating() + "\n";
+
+                MarkerOptions markerOptions = new MarkerOptions();
+                markerOptions.position(placeInfo.getLatlng());
+                markerOptions.title(placeInfo.getName());
+                markerOptions.snippet(snippet);
+
+                mMarker = mMap.addMarker(markerOptions);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            mMap.addMarker(new MarkerOptions().position(latLng));
+        }
+
+        hideSoftKeyboard();
+    }
+
     private void hideSoftKeyboard() {
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
@@ -326,7 +373,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
 
             moveCamera(new LatLng(place.getViewport().getCenter().latitude,
-                    place.getViewport().getCenter().longitude), DEFAULT_ZOOM, mPlace.getName());
+                    place.getViewport().getCenter().longitude), DEFAULT_ZOOM, mPlace);
 
             places.release(); // must be released when places api are using
         }
