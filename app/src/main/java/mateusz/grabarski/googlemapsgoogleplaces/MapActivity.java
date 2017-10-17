@@ -290,6 +290,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         mMap.clear();
 
+        mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapActivity.this));
+
         if (placeInfo != null) {
             try {
                 String snippet = "Address: " + placeInfo.getAddress() + "\n" +
