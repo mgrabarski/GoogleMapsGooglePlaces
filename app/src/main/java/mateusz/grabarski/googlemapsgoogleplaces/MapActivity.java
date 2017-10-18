@@ -1,6 +1,7 @@
 package mateusz.grabarski.googlemapsgoogleplaces;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -21,6 +22,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
@@ -30,6 +33,7 @@ import com.google.android.gms.location.places.AutocompletePrediction;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.Places;
+import com.google.android.gms.location.places.ui.PlacePicker;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -57,12 +61,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     public static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     public static final float DEFAULT_ZOOM = 15f;
     public static final int MAX_SEARCH_RESULTS = 3;
+    private static final int PLACE_PICKER_REQUEST = 1;
 
     private static final LatLngBounds LAT_LNG_BOUNDS = new LatLngBounds(
             new LatLng(-40, -168), new LatLng(71, 136));
 
     private AutoCompleteTextView mSearchText;
-    private ImageView myLocationIv, mInfo;
+    private ImageView myLocationIv, mInfo, mPlacePicker;
 
     private boolean mLocationPermissionsGranted = false;
 
@@ -82,6 +87,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mSearchText = findViewById(R.id.input_search);
         myLocationIv = findViewById(R.id.ic_gps);
         mInfo = findViewById(R.id.place_info);
+        mPlacePicker = findViewById(R.id.place_picker);
 
         getLocationPermission();
     }
@@ -143,7 +149,36 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
         });
 
+        mPlacePicker.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                PlacePicker.IntentBuilder builder = new PlacePicker.IntentBuilder();
+
+                try {
+                    startActivityForResult(builder.build(MapActivity.this), PLACE_PICKER_REQUEST);
+                } catch (GooglePlayServicesRepairableException e) {
+                    Log.e(TAG, "onClick: GooglePlayServicesRepairableException: " + e.getMessage());
+                } catch (GooglePlayServicesNotAvailableException e) {
+                    Log.e(TAG, "onClick: GooglePlayServicesNotAvailableException: " + e.getMessage());
+                }
+            }
+        });
+
         hideSoftKeyboard();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == PLACE_PICKER_REQUEST) {
+            if (resultCode == RESULT_OK) {
+                Place place = PlacePicker.getPlace(this, data);
+
+                PendingResult<PlaceBuffer> placeResult = Places.GeoDataApi.getPlaceById(mGoogleApiClient, place.getId());
+                placeResult.setResultCallback(mUpdatePlaceDetailsCallback);
+            }
+        }
     }
 
     private void geoLocation() {
